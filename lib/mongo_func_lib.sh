@@ -52,7 +52,6 @@ function run_mongo_command ()
    ${MONGO} ${F_MONGOHOST}:${F_MONGOPORT}/${F_MONGODBNAME} \
            --username ${F_MONGOUSER}                       \
            --password ${F_MONGOPASSWORD} --quiet <<- EOF
-           DBQuery.shellBatchSize = 10000000000;
            ${F_MONGOCOMMAND}
 EOF
 }
@@ -107,7 +106,7 @@ function mongo_json_insert_maker ()
    NO_OF_LOOPS=$((${NO_OF_ROWS}/11 + 1 ))
    for ((i=0;i<${NO_OF_LOOPS};i++))
    do
-       json_seed_data $i | sed "s/^/db.${COLLECTION_NAME}.insert( /" | \
+       json_seed_data $i | sed "s/^/db.${COLLECTION_NAME}.insertOne( /" | \
                          sed "s/$/ )/" >>${JSON_FILENAME}
    done
 }
@@ -228,15 +227,18 @@ function mongo_collection_size ()
    typeset -r F_MONGOUSER="$4"
    typeset -r F_MONGOPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
-   typeset -r F_COMMAND="printjson(db.${F_COLLECTION}.stats())"
+   #typeset -r F_COMMAND="printjson(db.${F_COLLECTION}.stats())"
+   output=$(mongosh "mongodb://mongo:mongo@localhost:27017/test" --eval "db.json_tables.stats().size" --quiet
+)
 
    process_log "calculating the size of mongo collection."
-   output="$(run_mongo_command "${F_MONGOHOST}" "${F_MONGOPORT}"   \
-                               "${F_MONGODBNAME}" "${F_MONGOUSER}" \
-                               "${F_MONGOPASSWORD}" "${F_COMMAND}")"
-   collectionsize="$(echo ${output}|awk -F"," '{print $5}'|cut -d":" -f2)"
+   #output="$(run_mongo_command "${F_MONGOHOST}" "${F_MONGOPORT}"   \
+   #                            "${F_MONGODBNAME}" "${F_MONGOUSER}" \
+   #                            "${F_MONGOPASSWORD}" "${F_COMMAND}")"
+   #collectionsize="$(echo ${output}|awk -F"," '{print $5}'|cut -d":" -f2)"
+   #collectionsize=$(echo "${output}")
 
-   echo "${collectionsize}"
+   echo "${output}"
 }
 
 
@@ -256,7 +258,6 @@ function mongo_version ()
                                "${F_MONGODBNAME}" "${F_MONGOUSER}"  \
                                "${F_MONGOPASSWORD}" "${F_COMMAND}" )"
    version=$(echo $output|awk '{print $2}')
-
    echo "${version}"
 }
 

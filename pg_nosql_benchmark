@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 #################################################################################
 # Copyright (c) 2013-2014, EnterpriseDB Corporation
@@ -39,28 +39,28 @@
 ################################################################################
 # set require variables.
 ################################################################################
-DIRECTORY=$(dirname $0)
-BASENAME=$(basename $0)
+DIRECTORY="/home/ubuntu/pg_nosql_benchmark"
+BASENAME="pg_nosql_benchmark"
 
-PGHOME="/usr/ppas-9.3"
-PGHOST="172.17.0.4"
+PGHOME="/usr/lib/postgresql/16"
+PGHOST="localhost"
 PGPORT="5432"
 PGUSER="postgres"
 PGPASSWORD="postgres"
 PGDATABASE="benchmark"
 
-PGBIN="/usr/ppas-9.3/bin"
+PGBIN="/usr/lib/postgresql/16/bin"
 
 ################################################################################
 # set mongo variables.
 ################################################################################
-MONGO="/usr/bin/mongo"
+MONGO="/usr/bin/mongosh"
 MONGOIMPORT="/usr/bin/mongoimport"
-MONGOHOST="172.17.0.3"
+MONGOHOST="localhost"
 MONGOPORT="27017"
 MONGOUSER="mongo"
 MONGOPASSWORD="mongo"
-MONGODBNAME="benchmark"
+MONGODBNAME="test"
 
 COLLECTION_NAME="json_tables"
 SAMPLEJSON="sample.json"
@@ -78,7 +78,7 @@ source ${DIRECTORY}/lib/mongo_func_lib.sh
 ################################################################################
 # declare require arrays
 ################################################################################
-declare -a json_rows=(10000000)
+declare -a json_rows=(1000000)
 
 declare -a pg_size_time
 declare -a pg_copy_time
@@ -114,6 +114,7 @@ process_log "PostgreSQL Version $pg_version"
 
 for (( indx=0 ; indx < ${#json_rows[@]} ; indx++ ))
 do
+
    generate_json_rows "${json_rows[${indx}]}" \
                       "${SAMPLEJSON}"
 
@@ -125,12 +126,12 @@ do
                            "${json_rows[${indx}]}" \
                            "${MONGO_INSERTS}"
 
-
    remove_pg_db "${PGHOST}"     \
                 "${PGPORT}"     \
                 "${PGDATABASE}" \
                 "${PGUSER}"     \
                 "${PGPASSWORD}"
+
    create_pg_db "${PGHOST}"     \
                 "${PGPORT}"     \
                 "${PGDATABASE}" \
@@ -192,6 +193,7 @@ do
                                                  "${PGPASSWORD}" \
                                                  "${COLLECTION_NAME}"
                             )
+
    pg_size_time[${indx}]=$(pg_relation_size "${PGHOST}"     \
                                             "${PGPORT}"     \
                                             "${PGDATABASE}" \
@@ -231,6 +233,7 @@ do
                                                            "${COLLECTION_NAME}" \
                                                             "${MONGO_INSERTS}"
                                 )
+
    delete_json_data "${PGHOST}"      \
                     "${PGPORT}"      \
                     "${PGDATABASE}"  \
@@ -258,7 +261,3 @@ print_result "MONGO IMPORT (ns)"  "${mongo_copy_time[@]}"
 print_result "MONGO INSERT (ns)"  "${mongo_inserts_time[@]}"
 print_result "MONGO SELECT (ns)"  "${mongo_select_time[@]}"
 print_result "MONGO SIZE (bytes)" "${mongo_size_time[@]}"
-
-rm -rf ${SAMPLEJSON}*
-rm -rf ${PG_INSERTS}
-rm -rf ${MONGO_INSERTS}
