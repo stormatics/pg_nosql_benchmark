@@ -135,7 +135,7 @@ function pg_relation_size ()
    typeset -r F_PGUSER="$4"
    typeset -r F_PGPASSWORD="$5"
    typeset -r F_RELATION="$6"
-   typeset -r F_SQL="SELECT pg_catalog.pg_relation_size('${F_RELATION}');"
+   typeset -r F_SQL="SELECT pg_catalog.pg_total_relation_size('${F_RELATION}');"
 
    process_log "calculating PostgreSQL collection size."
    run_sql "${F_PGHOST}" "${F_PGPORT}" "${F_DBNAME}" "${F_PGUSER}" \
@@ -197,7 +197,9 @@ function pg_create_index_collection ()
    typeset -r F_PGUSER="$4"
    typeset -r F_PGPASSWORD="$5"
    typeset -r F_TABLE="$6"
-   typeset -r F_SQL="CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE} USING gin(data);"
+   #typeset -r F_SQL="CREATE INDEX ${F_TABLE}_idx ON ${F_TABLE} USING gin(data);"
+   typeset -r F_SQL="CREATE INDEX idx_brand ON ${F_TABLE} ((data->>'brand'));CREATE INDEX idx_name ON ${F_TABLE} ((data->>'name'));CREATE INDEX idx_type ON ${F_TABLE} ((data->>'type'));"
+   #typeset -r F_SQL="CREATE INDEX brand_idx ON ${F_TABLE} USING GIN (( data ->> 'brand' ));"
 
    process_log "creating index on postgreSQL collections."
    run_sql "${F_PGHOST}" "${F_PGPORT}" "${F_DBNAME}" "${F_PGUSER}" \
@@ -222,7 +224,7 @@ function delete_json_data ()
    process_log "droping json object in postgresql."
    run_sql "${F_PGHOST}" "${F_PGPORT}" "${F_DBNAME}" "${F_PGUSER}" \
            "${F_PGPASSWORD}" \
-           "TRUNCATE TABLE ${F_COLLECTION};" >/dev/null
+           "TRUNCATE TABLE ${F_COLLECTION}; drop index idx_brand; drop index idx_name; drop index idx_type;" >/dev/null
 }
 
 ################################################################################
@@ -288,18 +290,27 @@ function pg_select_benchmark ()
    typeset -r F_PGUSER="$4"
    typeset -r F_PGPASSWORD="$5"
    typeset -r F_COLLECTION="$6"
+   #typeset -r F_SELECT1="SELECT data FROM ${F_COLLECTION} WHERE data @> '{\"brand\": \"ACME\"}';"
+
+   #typeset -r F_SELECT2="SELECT data FROM ${F_COLLECTION} WHERE data @> '{\"name\": \"Phone Service Basic Plan\"}';"
+
+   #typeset -r F_SELECT3="SELECT data FROM ${F_COLLECTION} WHERE data @> '{\"name\": \"AC3 Case Red\"}';"
+
+   #typeset -r F_SELECT4="SELECT data FROM ${F_COLLECTION} WHERE data @> '{\"type\": \"service\"}';"
+
    typeset -r F_SELECT1="SELECT data
-                         FROM ${F_COLLECTION}
-                           WHERE  (data->>'brand') = 'ACME';"
-   typeset -r F_SELECT2="SELECT data
-                         FROM ${F_COLLECTION}
-                           WHERE  (data->>'name') = 'Phone Service Basic Plan';"
-   typeset -r F_SELECT3="SELECT data
-                         FROM ${F_COLLECTION}
-                          WHERE  (data->>'name') = 'AC3 Case Red';"
-   typeset -r F_SELECT4="SELECT data
-                          FROM ${F_COLLECTION}
-                            WHERE  (data->>'type') = 'service';"
+                            FROM ${F_COLLECTION}
+			                               WHERE  (data->>'brand') = 'ACME';"
+						          typeset -r F_SELECT2="SELECT data
+							                           FROM ${F_COLLECTION}
+										                              WHERE  (data->>'name') = 'Phone Service Basic Plan';"
+													         typeset -r F_SELECT3="SELECT data
+														                          FROM ${F_COLLECTION}
+																	                            WHERE  (data->>'name') = 'AC3 Case Red';"
+																				       typeset -r F_SELECT4="SELECT data
+																				                                 FROM ${F_COLLECTION}
+																								                             WHERE  (data->>'type') = 'service';"
+
    local START end_time
 
    process_log "testing FIRST SELECT in postgresql."
@@ -338,6 +349,29 @@ function pg_select_benchmark ()
 
    echo "${AVG}"
 }
+
+################################################################################
+# function: mk_pgjson_collection create json table in PG
+################################################################################
+
+function check_counts ()
+{
+   typeset -r F_PGHOST="$1"
+   typeset -r F_PGPORT="$2"
+   typeset -r F_DBNAME="$3"
+   typeset -r F_PGUSER="$4"
+   typeset -r F_PGPASSWORD="$5"
+   typeset -r F_TABLE="$6"
+   typeset -r F_SQL="SELECT COUNT(*) FROM ${F_TABLE};"
+
+   process_log "checking count in postgreSQL table."
+   counts=run_sql "${F_PGHOST}" "${F_PGPORT}" "${F_DBNAME}" "${F_PGUSER}" \
+           "${F_PGPASSWORD}" "${F_SQL}" \
+            >/dev/null || exit_on_error "failed to execute SELECT count."
+
+   echo "${counts}"
+}
+
 
 ################################################################################
 # function: mk_pgjson_collection create json table in PG
