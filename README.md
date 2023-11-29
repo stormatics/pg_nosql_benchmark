@@ -73,6 +73,9 @@ Recommended modules
   2. postgresql94-9.4beta1-1PGDG.rhel6.x86_64
   3. bc-1.06.95-1.el6.x86_64
   4. git-1.7.1-3.el6_4.1.x86_64
+  5. Latest version of node
+  6. sudo sysctl -w vm.max_map_count=262144
+  7. NODE_OPTIONS=--max-old-space-size=8192(half of available memory on the system)
 
 Installation
 ------------
